@@ -5,6 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ad-Reward Platform</title>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
+    <!-- Firebase SDK Modular Imports (v10+) -->
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
     <style>
         /* CSS Styling */
         :root {
@@ -118,83 +122,6 @@
             opacity: 0.8;
         }
 
-        /* ----- Modals (Shared Styles) ----- */
-        .modal-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: var(--modal-overlay);
-            display: none;
-            justify-content: center;
-            align-items: center;
-            z-index: 1000;
-            transition: opacity 0.3s ease;
-        }
-
-        .modal-content {
-            background-color: white;
-            padding: 25px;
-            border-radius: 12px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-            position: relative;
-            max-width: 400px;
-            width: 90%;
-            animation: slideIn 0.3s ease-out;
-        }
-
-        @keyframes slideIn {
-            from { transform: translateY(-50px); opacity: 0; }
-            to { transform: translateY(0); opacity: 1; }
-        }
-
-        .close-btn {
-            position: absolute;
-            top: 15px;
-            right: 15px;
-            font-size: 1.5rem;
-            cursor: pointer;
-            color: #aaa;
-            line-height: 1;
-        }
-
-        .close-btn:hover {
-            color: #333;
-        }
-
-        /* ----- Google Account Selector Modal ----- */
-        #account-selector-modal h2 {
-            margin-top: 0;
-            border-bottom: 1px solid #eee;
-            padding-bottom: 15px;
-        }
-
-        #account-list {
-            list-style: none;
-            padding: 0;
-            margin: 10px 0;
-        }
-
-        .account-item {
-            display: flex;
-            align-items: center;
-            padding: 12px;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: background-color 0.2s ease;
-        }
-
-        .account-item:hover {
-            background-color: #f0f0f0;
-        }
-
-        .account-icon {
-            font-size: 1.5rem;
-            margin-right: 15px;
-            color: #555;
-        }
-
         /* ----- Dashboard Styles ----- */
         #dashboard-screen {
             background: var(--card-background);
@@ -282,6 +209,37 @@
         #watch-ad-btn {
             padding: 20px 30px;
             font-size: 1.3rem;
+        }
+
+        /* ----- Modals (Shared Styles) ----- */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: var(--modal-overlay);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            transition: opacity 0.3s ease;
+        }
+
+        .modal-content {
+            background-color: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            position: relative;
+            max-width: 400px;
+            width: 90%;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        @keyframes slideIn {
+            from { transform: translateY(-50px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
         }
 
         /* ----- Ad Player Modal ----- */
@@ -408,8 +366,9 @@
                 <img src="https://img.icons8.com/color/96/000000/google-logo.png" alt="Google Logo" style="width: 50px; margin-bottom: 20px;">
                 <h1>Welcome to Ad-Reward Platform</h1>
                 <p>Login or create an account to start earning.</p>
-                <button class="btn btn-primary" onclick="handleLoginAttempt(true)">Create New Account</button>
-                <button class="btn btn-secondary" onclick="handleLoginAttempt(false)">Already Have Account</button>
+                <!-- Both buttons will trigger Google Sign-in. The logic handles first-time vs existing user. -->
+                <button class="btn btn-primary" id="create-account-btn">Create New Account</button>
+                <button class="btn btn-secondary" id="login-account-btn">Already Have Account</button>
             </div>
         </div>
 
@@ -440,17 +399,7 @@
         </div>
     </div>
 
-    <!-- Modal 1: Account Selector Modal (Simulates Google Sign-In) -->
-    <div id="account-selector-modal" class="modal-overlay">
-        <div class="modal-content">
-            <span class="close-btn" onclick="closeModal('account-selector-modal')">&times;</span>
-            <h2>Sign in with Google</h2>
-            <ul id="account-list"></ul>
-            <p id="account-error-message" style="color: var(--error-color); margin-top: 15px; display: none;"></p>
-        </div>
-    </div>
-
-    <!-- Modal 2: Ad Player Modal -->
+    <!-- Modal 1: Ad Player Modal -->
     <div id="ad-player-modal" class="modal-overlay">
         <div class="modal-content">
             <div class="ad-simulation">
@@ -473,9 +422,18 @@
     <script>
         // JavaScript Logic
 
+        // --- Firebase Configuration ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyBVx3r3NCV5BDWfUHEGoec0ZAKATQg3zds",
+            authDomain: "earning-app-2114c.firebaseapp.com",
+            databaseURL: "https://earning-app-2114c-default-rtdb.firebaseio.com",
+            projectId: "earning-app-2114c",
+            storageBucket: "earning-app-2114c.firebasestorage.app",
+            messagingSenderId: "709726385925",
+            appId: "1:709726385925:web:ac19af15adbc983088696c"
+        };
+
         // --- Constants and Configuration ---
-        const LOCAL_STORAGE_KEY_USERS = 'adPlatformUsers';
-        const LOCAL_STORAGE_KEY_SESSION = 'currentUserEmail';
         const AD_DURATION_SECONDS = 10;
         const REWARD_AMOUNT = 1; // ₹1 per ad
 
@@ -483,10 +441,7 @@
         const appContainer = document.getElementById('app');
         const loginScreen = document.getElementById('login-screen');
         const dashboardScreen = document.getElementById('dashboard-screen');
-        const accountSelectorModal = document.getElementById('account-selector-modal');
         const adPlayerModal = document.getElementById('ad-player-modal');
-        const accountListEl = document.getElementById('account-list');
-        const accountErrorMessageEl = document.getElementById('account-error-message');
         const balanceDisplayEl = document.getElementById('balance-display');
         const adsWatchedCounterEl = document.getElementById('ads-watched-counter');
         const userDisplayEmailEl = document.getElementById('user-display-email');
@@ -495,166 +450,143 @@
         const adCountdownTimerEl = document.getElementById('ad-countdown-timer');
         const adTimerDisplayEl = document.getElementById('ad-timer');
         const notificationContainer = document.getElementById('notification-container');
+        const createAccountBtn = document.getElementById('create-account-btn');
+        const loginAccountBtn = document.getElementById('login-account-btn');
+
+        // --- Firebase References ---
+        let auth;
+        let db;
+        let currentUser;
+        let userDatabaseRef;
 
         // --- State Variables ---
-        let currentUserId = null; // Email of the logged-in user
         let currentAdTimer = null; // Timer instance for ad countdown
-        let loginModeCreateNew = false; // Flag to determine login flow (create or sign in)
-
-        // --- Mock Data: Simulated Google Accounts ---
-        const mockAccounts = [
-            { id: 1, email: "john.doe@gmail.com", avatar: "JD" },
-            { id: 2, email: "jane.smith@gmail.com", avatar: "JS" },
-            { id: 3, email: "alex.jones@gmail.com", avatar: "AJ" }
-        ];
 
         // --- Initialization on Page Load ---
         document.addEventListener('DOMContentLoaded', initApp);
 
         function initApp() {
-            // Check session persistence on page load
-            checkSessionPersistence();
+            // Initialize Firebase services
+            initializeApp(firebaseConfig);
+            auth = firebase.auth();
+            db = firebase.database();
+            console.log("Firebase initialized successfully.");
 
-            // Setup event listeners for UI interactions
+            // Set up event listeners for UI interactions
+            createAccountBtn.addEventListener('click', () => handleLoginAttempt(true));
+            loginAccountBtn.addEventListener('click', () => handleLoginAttempt(false));
             watchAdBtn.addEventListener('click', startAdProcess);
             skipAdBtn.addEventListener('click', finishAd); // Re-purpose skip button as close button after timer
-        }
 
-        // --- Session Management Functions ---
-
-        /**
-         * Checks if a user is already logged in from previous session.
-         */
-        function checkSessionPersistence() {
-            const storedEmail = localStorage.getItem(LOCAL_STORAGE_KEY_SESSION);
-            if (storedEmail) {
-                currentUserId = storedEmail;
-                // Verify user data still exists in database (safety check)
-                if (getLSData().users[currentUserId]) {
+            // Listen for changes in authentication state (session persistence)
+            auth.onAuthStateChanged(user => {
+                if (user) {
+                    // User is signed in. Update state and UI.
+                    currentUser = user;
+                    userDatabaseRef = db.ref(`users/${currentUser.uid}`);
+                    checkAndCreateUserRecord();
                     showScreen('dashboard-screen');
-                    updateDashboardUI();
                 } else {
-                    // Stale session data, clear and show login screen
-                    localStorage.removeItem(LOCAL_STORAGE_KEY_SESSION);
+                    // User is signed out. Reset state and show login screen.
+                    currentUser = null;
+                    userDatabaseRef = null;
                     showScreen('login-screen');
                 }
-            } else {
-                showScreen('login-screen');
-            }
+            });
+        }
+
+        // --- Login Process and Firebase Authentication ---
+
+        /**
+         * Initiates Google Sign-In using Firebase.
+         * Note: Firebase signInWithPopup automatically handles new user creation (create account)
+         * and existing user login in one flow. The UI buttons on the login screen both trigger this same function.
+         * @param {boolean} isNewAccountFlow - Flag to indicate if "Create New Account" button was pressed.
+         */
+        function handleLoginAttempt(isNewAccountFlow) {
+            const provider = new firebase.auth.GoogleAuthProvider();
+            provider.addScope('profile');
+            provider.addScope('email');
+
+            auth.signInWithPopup(provider)
+                .then(result => {
+                    // Authentication successful. The onAuthStateChanged listener will handle the next steps.
+                    const user = result.user;
+                    console.log(`User ${user.email} logged in successfully.`);
+                    if (isNewAccountFlow) {
+                        showNotification("Account created successfully!", "success");
+                    } else {
+                        showNotification("Login successful!", "success");
+                    }
+                })
+                .catch(error => {
+                    // Handle errors during sign-in
+                    const errorMessage = error.message;
+                    console.error("Authentication Error:", errorMessage);
+                    showNotification(errorMessage, "error");
+                });
         }
 
         /**
          * Logs out the current user, clears session data, and redirects to login screen.
          */
         function logout() {
-            currentUserId = null;
-            localStorage.removeItem(LOCAL_STORAGE_KEY_SESSION);
-            showScreen('login-screen');
-            showNotification("Logged out successfully.", "success");
-        }
-
-        // --- Login Process and Account Selector Functions ---
-
-        /**
-         * Initiates the login process by determining if it's a new account creation
-         * or a standard login, then displays the account selector modal.
-         * @param {boolean} isNewAccount - True if user clicked "Create New Account", false for "Already Have Account".
-         */
-        function handleLoginAttempt(isNewAccount) {
-            loginModeCreateNew = isNewAccount;
-            populateAccountSelectorModal();
-            showModal('account-selector-modal');
-            accountErrorMessageEl.style.display = 'none'; // Clear previous errors
+            auth.signOut()
+                .then(() => {
+                    console.log("User signed out.");
+                    showNotification("Logged out successfully.", "success");
+                })
+                .catch(error => {
+                    console.error("Logout error:", error);
+                    showNotification("Logout failed.", "error");
+                });
         }
 
         /**
-         * Populates the mock account selector modal with list items.
+         * Checks if a user record exists in the database on login. Creates a default record if not found.
          */
-        function populateAccountSelectorModal() {
-            accountListEl.innerHTML = ''; // Clear existing list
-            mockAccounts.forEach(account => {
-                const li = document.createElement('li');
-                li.className = 'account-item';
-                li.innerHTML = `
-                    <div class="account-icon">${account.avatar}</div>
-                    <span>${account.email}</span>
-                `;
-                li.onclick = () => processAccountSelection(account.email);
-                accountListEl.appendChild(li);
+        function checkAndCreateUserRecord() {
+            userDatabaseRef.once('value')
+                .then(snapshot => {
+                    const userData = snapshot.val();
+                    if (!userData) {
+                        // Create new user record in Realtime Database with default values
+                        const newUserRecord = {
+                            email: currentUser.email,
+                            balance: 0,
+                            adsWatchedCount: 0,
+                            createdAt: new Date().toISOString()
+                        };
+                        userDatabaseRef.set(newUserRecord)
+                            .then(() => console.log("New user record created in DB."))
+                            .catch(error => console.error("Error creating user record:", error));
+                    }
+                    // Start listening for real-time updates to the dashboard UI
+                    listenForUserDataUpdates();
+                })
+                .catch(error => console.error("Error checking user record:", error));
+        }
+
+        /**
+         * Sets up a real-time listener for the user's data in the database.
+         * Updates dashboard UI automatically when data changes.
+         */
+        function listenForUserDataUpdates() {
+            userDatabaseRef.on('value', snapshot => {
+                const userData = snapshot.val();
+                if (userData) {
+                    userDisplayEmailEl.textContent = `Hello, ${userData.email}`;
+                    balanceDisplayEl.textContent = `₹${userData.balance}`;
+                    adsWatchedCounterEl.textContent = userData.adsWatchedCount;
+
+                    // Animate balance update
+                    balanceDisplayEl.style.fontSize = '2.8rem';
+                    setTimeout(() => balanceDisplayEl.style.fontSize = '2.5rem', 500);
+                }
             });
         }
 
-        /**
-         * Processes the selected email based on the login mode (create or login).
-         * @param {string} email - The email selected by the user.
-         */
-        function processAccountSelection(email) {
-            const { users } = getLSData();
-
-            if (loginModeCreateNew) {
-                // Scenario: Create New Account flow
-                if (users[email]) {
-                    // Error: Account already exists
-                    accountErrorMessageEl.textContent = "Error: Account already exists. Please select 'Already Have Account' to sign in.";
-                    accountErrorMessageEl.style.display = 'block';
-                } else {
-                    // Success: Create new user account
-                    const newUser = {
-                        email: email,
-                        balance: 0,
-                        adsWatchedCount: 0,
-                        createdAt: new Date().toISOString()
-                    };
-                    users[email] = newUser;
-                    saveLSData({ users: users });
-                    finalizeLogin(email);
-                    showNotification("Account created successfully!", "success");
-                }
-            } else {
-                // Scenario: Already Have Account flow
-                if (users[email]) {
-                    // Success: Account found, finalize login
-                    finalizeLogin(email);
-                } else {
-                    // Error: Account not found
-                    accountErrorMessageEl.textContent = "Error: Account not found. Please create a new account first.";
-                    accountErrorMessageEl.style.display = 'block';
-                }
-            }
-        }
-
-        /**
-         * Finalizes the login process by setting the session and updating UI.
-         * @param {string} email - The email of the successfully logged-in user.
-         */
-        function finalizeLogin(email) {
-            currentUserId = email;
-            localStorage.setItem(LOCAL_STORAGE_KEY_SESSION, email);
-            closeModal('account-selector-modal');
-            showScreen('dashboard-screen');
-            updateDashboardUI();
-        }
-
         // --- Dashboard and Ad Watching Logic ---
-
-        /**
-         * Updates the user's statistics displayed on the dashboard.
-         */
-        function updateDashboardUI() {
-            if (!currentUserId) return; // Guard clause if not logged in
-
-            const { users } = getLSData();
-            const userData = users[currentUserId];
-            if (userData) {
-                userDisplayEmailEl.textContent = `Hello, ${userData.email}`;
-                balanceDisplayEl.textContent = `₹${userData.balance}`;
-                adsWatchedCounterEl.textContent = userData.adsWatchedCount;
-
-                // Animate balance update
-                balanceDisplayEl.style.fontSize = '2.8rem';
-                setTimeout(() => balanceDisplayEl.style.fontSize = '2.5rem', 500);
-            }
-        }
 
         /**
          * Starts the ad viewing process. Displays ad modal and begins countdown.
@@ -695,17 +627,32 @@
         }
 
         /**
-         * Awards the user ₹1 after watching the ad completely.
+         * Awards the user ₹1 after watching the ad completely by updating Firebase database.
          */
         function rewardUser() {
-            const { users } = getLSData();
-            if (users[currentUserId]) {
-                users[currentUserId].balance += REWARD_AMOUNT;
-                users[currentUserId].adsWatchedCount++;
-                saveLSData({ users: users });
-                updateDashboardUI();
-                showNotification(`Reward received! Added ₹${REWARD_AMOUNT} to your balance.`, "success");
-            }
+            userDatabaseRef.once('value')
+                .then(snapshot => {
+                    const userData = snapshot.val();
+                    if (userData) {
+                        const newBalance = userData.balance + REWARD_AMOUNT;
+                        const newAdsWatchedCount = userData.adsWatchedCount + 1;
+
+                        // Update data in Firebase Realtime Database
+                        userDatabaseRef.update({
+                            balance: newBalance,
+                            adsWatchedCount: newAdsWatchedCount
+                        }).then(() => {
+                            showNotification(`Reward received! Added ₹${REWARD_AMOUNT} to your balance.`, "success");
+                        }).catch(error => {
+                            console.error("Error updating balance:", error);
+                            showNotification("Error updating balance. Please try again.", "error");
+                        });
+                    }
+                })
+                .catch(error => {
+                    console.error("Error fetching user data for reward:", error);
+                    showNotification("Error fetching user data.", "error");
+                });
         }
 
         /**
@@ -744,25 +691,6 @@
          */
         function closeModal(modalId) {
             document.getElementById(modalId).style.display = 'none';
-        }
-
-        /**
-         * Retrieves data from localStorage.
-         * @returns {object} The parsed data from localStorage or default empty structure.
-         */
-        function getLSData() {
-            const data = localStorage.getItem(LOCAL_STORAGE_KEY_USERS);
-            return data ? JSON.parse(data) : { users: {} };
-        }
-
-        /**
-         * Saves data back to localStorage. Merges new data with existing data.
-         * @param {object} newData - The data object to save.
-         */
-        function saveLSData(newData) {
-            const existingData = getLSData();
-            const mergedData = { ...existingData, ...newData };
-            localStorage.setItem(LOCAL_STORAGE_KEY_USERS, JSON.stringify(mergedData));
         }
 
         /**
