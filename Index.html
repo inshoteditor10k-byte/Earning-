@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AdReward | Earn Daily</title>
+    <style>
+        :root {
+            --primary: #4285f4;
+            --secondary: #34a853;
+            --bg-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --glass: rgba(255, 255, 255, 0.15);
+            --glass-border: rgba(255, 255, 255, 0.2);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        body {
+            background: var(--bg-gradient);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            overflow-x: hidden;
+        }
+
+        /* --- UI Components --- */
+        .container {
+            width: 100%;
+            max-width: 400px;
+            padding: 20px;
+        }
+
+        .card {
+            background: var(--glass);
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            padding: 40px 30px;
+            text-align: center;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+            animation: fadeIn 0.5s ease;
+        }
+
+        h1 { margin-bottom: 10px; font-weight: 700; font-size: 2rem; }
+        p { margin-bottom: 30px; opacity: 0.9; font-size: 0.9rem; }
+
+        .btn {
+            display: block;
+            width: 100%;
+            padding: 15px;
+            margin-bottom: 15px;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
+            transition: transform 0.2s, background 0.3s;
+        }
+
+        .btn-primary { background: white; color: #333; }
+        .btn-outline { background: transparent; border: 2px solid white; color: white; }
+        .btn:hover { transform: translateY(-3px); opacity: 0.9; }
+
+        /* --- Google Selector Modal --- */
+        #google-modal {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+        }
+
+        .google-card {
+            background: white;
+            color: #333;
+            width: 320px;
+            border-radius: 8px;
+            padding: 20px;
+            text-align: left;
+        }
+
+        .google-card img { width: 80px; margin-bottom: 15px; }
+        .account-item {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+            cursor: pointer;
+        }
+        .account-item:hover { background: #f5f5f5; }
+        .avatar { width: 35px; height: 35px; border-radius: 50%; background: #ccc; margin-right: 12px; }
+
+        /* --- Dashboard --- */
+        #dashboard { display: none; }
+        .balance-card { font-size: 2.5rem; margin: 20px 0; color: #fff; font-weight: bold; }
+        .stats { display: flex; justify-content: space-around; margin-bottom: 25px; font-size: 0.8rem; }
+        
+        /* --- Ad Modal --- */
+        #ad-container {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: #000;
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 200;
+        }
+        .video-sim {
+            width: 80%;
+            max-width: 600px;
+            height: 300px;
+            background: linear-gradient(45deg, #111, #333);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-radius: 10px;
+            position: relative;
+        }
+        #timer { position: absolute; top: 20px; right: 20px; background: rgba(0,0,0,0.6); padding: 5px 15px; border-radius: 20px; }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes countUp { from { transform: scale(1.1); color: var(--secondary); } to { transform: scale(1); } }
+        .update-anim { animation: countUp 0.5s ease; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <div id="login-screen" class="card">
+            <h1>AdReward</h1>
+            <p>Watch ads. Earn real money.</p>
+            <button class="btn btn-primary" onclick="openGoogleSelector('signup')">Create New Account</button>
+            <button class="btn btn-outline" onclick="openGoogleSelector('login')">Already Have Account</button>
+            <div id="error-msg" style="color: #ffcfcf; margin-top: 10px; font-size: 0.8rem;"></div>
+        </div>
+
+        <div id="dashboard" class="card">
+            <p id="user-email" style="font-weight: bold; margin-bottom: 5px;"></p>
+            <div class="stats">
+                <span>Status: Verified</span>
+                <span id="ads-count">Ads Watched: 0</span>
+            </div>
+            <p style="margin-bottom: 5px;">Current Balance</p>
+            <div id="balance-display" class="balance-card">₹0</div>
+            <button class="btn btn-primary" style="background: var(--secondary); color: white;" onclick="startAd()">Watch Ad (+ ₹1)</button>
+            <button class="btn btn-outline" onclick="logout()" style="border-color: rgba(255,255,255,0.3); font-size: 0.8rem; padding: 10px;">Logout</button>
+        </div>
+    </div>
+
+    <div id="google-modal">
+        <div class="google-card">
+            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/Google_Reference_Identity_Seal.svg/1024px-Google_Reference_Identity_Seal.svg.png" alt="Google" style="width: 30px;">
+            <h2 style="font-size: 1.2rem; margin-bottom: 5px;">Choose an account</h2>
+            <p style="color: #666; margin-bottom: 15px; font-size: 0.85rem;">to continue to AdReward</p>
+            
+            <div id="account-list">
+                <div class="account-item" onclick="handleAuth('user1@gmail.com')">
+                    <div class="avatar" style="background: #ea4335;"></div>
+                    <div>
+                        <div style="font-weight: 600; font-size: 0.9rem;">Rahul Sharma</div>
+                        <div style="font-size: 0.8rem; color: #555;">user1@gmail.com</div>
+                    </div>
+                </div>
+                <div class="account-item" onclick="handleAuth('guest.tester@gmail.com')">
+                    <div class="avatar" style="background: #4285f4;"></div>
+                    <div>
+                        <div style="font-weight: 600; font-size: 0.9rem;">Guest Tester</div>
+                        <div style="font-size: 0.8rem; color: #555;">guest.tester@gmail.com</div>
+                    </div>
+                </div>
+            </div>
+            <button onclick="closeModal()" style="margin-top: 15px; background: none; border: none; color: #4285f4; cursor: pointer;">Cancel</button>
+        </div>
+    </div>
+
+    <div id="ad-container">
+        <div id="timer">Wait 10s...</div>
+        <div class="video-sim">
+            <div style="text-align: center;">
+                <h3 style="margin-bottom: 10px;">ADVERTISEMENT</h3>
+                <p>Buy Awesome Coffee &copy;</p>
+                <div style="width: 50px; height: 50px; border: 4px solid #fff; border-top: 4px solid transparent; border-radius: 50%; animation: spin 1s linear infinite; margin: 20px auto;"></div>
+            </div>
+        </div>
+        <button id="skip-btn" class="btn" style="width: 200px; margin-top: 20px; background: #555; cursor: not-allowed;" disabled>Finish Ad</button>
+    </div>
+
+    <style> @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } } </style>
+
+    <script>
+        // --- State Management ---
+        let currentUser = null;
+        let currentAuthMode = ''; // 'login' or 'signup'
+
+        // Initialization
+        window.onload = () => {
+            const savedUser = localStorage.getItem('session');
+            if (savedUser) {
+                loginUser(savedUser);
+            }
+        };
+
+        // --- Auth Functions ---
+        function openGoogleSelector(mode) {
+            currentAuthMode = mode;
+            document.getElementById('google-modal').style.display = 'flex';
+            document.getElementById('error-msg').innerText = '';
+        }
+
+        function closeModal() {
+            document.getElementById('google-modal').style.display = 'none';
+        }
+
+        function handleAuth(email) {
+            let users = JSON.parse(localStorage.getItem('users') || '{}');
+            
+            if (currentAuthMode === 'signup') {
+                if (users[email]) {
+                    showError("Account already exists. Please login.");
+                    closeModal();
+                    return;
+                }
+                // Create New User
+                users[email] = {
+                    email: email,
+                    balance: 0,
+                    adsWatched: 0,
+                    createdAt: new Date().toISOString()
+                };
+                localStorage.setItem('users', JSON.stringify(users));
+                loginUser(email);
+            } else {
+                // Login
+                if (!users[email]) {
+                    showError("Account not found. Please create account first.");
+                    closeModal();
+                    return;
+                }
+                loginUser(email);
+            }
+            closeModal();
+        }
+
+        function loginUser(email) {
+            let users = JSON.parse(localStorage.getItem('users') || '{}');
+            currentUser = users[email];
+            localStorage.setItem('session', email);
+            
+            // Switch UI
+            document.getElementById('login-screen').style.display = 'none';
+            document.getElementById('dashboard').style.display = 'block';
+            updateDashboardUI();
+        }
+
+        function logout() {
+            localStorage.removeItem('session');
+            location.reload();
+        }
+
+        function showError(msg) {
+            document.getElementById('error-msg').innerText = msg;
+        }
+
+        // --- Dashboard Logic ---
+        function updateDashboardUI() {
+            if (!currentUser) return;
+            document.getElementById('user-email').innerText = currentUser.email;
+            
+            const balEl = document.getElementById('balance-display');
+            balEl.innerText = `₹${currentUser.balance}`;
+            balEl.classList.add('update-anim');
+            setTimeout(() => balEl.classList.remove('update-anim'), 500);
+
+            document.getElementById('ads-count').innerText = `Ads Watched: ${currentUser.adsWatched}`;
+        }
+
+        // --- Ad Logic ---
+        function startAd() {
+            const adContainer = document.getElementById('ad-container');
+            const skipBtn = document.getElementById('skip-btn');
+            const timerEl = document.getElementById('timer');
+            
+            adContainer.style.display = 'flex';
+            let timeLeft = 10;
+            
+            skipBtn.disabled = true;
+            skipBtn.style.background = "#555";
+            skipBtn.style.cursor = "not-allowed";
+            skipBtn.innerText = "Watching...";
+
+            const countdown = setInterval(() => {
+                timeLeft--;
+                timerEl.innerText = `Wait ${timeLeft}s...`;
+                
+                if (timeLeft <= 0) {
+                    clearInterval(countdown);
+                    timerEl.innerText = "Ad Finished!";
+                    skipBtn.disabled = false;
+                    skipBtn.style.background = "var(--secondary)";
+                    skipBtn.style.cursor = "pointer";
+                    skipBtn.innerText = "Claim ₹1 Reward";
+                    skipBtn.onclick = completeAd;
+                }
+            }, 1000);
+        }
+
+        function completeAd() {
+            // Update Data
+            let users = JSON.parse(localStorage.getItem('users'));
+            let email = currentUser.email;
+            
+            users[email].balance += 1;
+            users[email].adsWatched += 1;
+            
+            // Save to LocalStorage
+            localStorage.setItem('users', JSON.stringify(users));
+            currentUser = users[email]; // Sync local state
+            
+            // UI Cleanup
+            document.getElementById('ad-container').style.display = 'none';
+            updateDashboardUI();
+        }
+    </script>
+</body>
+</html>
